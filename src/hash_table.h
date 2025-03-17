@@ -29,7 +29,8 @@ ht *ht_create(unsigned int size);
 void ht_clear(ht *ht);
 
 unsigned int ht_hash(ht *ht, const char *key);
+/* Remove a key by set its data to NULL pointer
+ * */
 void ht_insert(ht *ht, const char *key, void *data);
-void ht_remove(ht *ht, const char *key);
 void *ht_get(ht *ht, const char *key);
 #endif
