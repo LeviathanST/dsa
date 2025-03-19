@@ -24,43 +24,69 @@ unsigned int ht_hash(ht *ht, const char *key) {
   return h % ht->size;
 }
 
-// TODO: Need to enhance for collison avoiding
-void ht_insert(ht *ht, const char *key, void *data) {
-  unsigned int h = ht_hash(ht, key);
-  ht_node *node = ht->nodes[h];
+ht_node *ht_create_node(const char *key, void *data) {
+  ht_node *p_node = malloc(sizeof(ht_node));
+  if (p_node == NULL) {
+    printf("Cannot allocate for new node: %s", strerror(errno));
+    free(p_node);
+    return 0;
+  }
+  p_node->data = data;
+  p_node->key = key;
+  p_node->next = 0;
+  return p_node;
+}
 
-  if (node == NULL) {
-    ht_node *p_new = malloc(sizeof(ht_node));
-    if (p_new == NULL) {
-      printf("Cannot allocate for new node: %s", strerror(errno));
-      return;
-    }
-    p_new->data = data;
-    p_new->key = key;
-    ht->nodes[h] = p_new;
+int ht_insert(ht *ht, const char *key, void *data) {
+  unsigned int h = ht_hash(ht, key);
+  ht_node *p_node = ht->nodes[h];
+
+  if (!p_node) {
+    p_node = ht_create_node(key, data);
+    ht->nodes[h] = p_node;
   } else {
-    if (node->key == key) {
+    if (p_node->key == key) {
       if (data != NULL) {
-        node->data = data;
-        return;
+        p_node->data = data;
       } else {
         ht->nodes[h] = NULL;
-        return;
       }
     } else {
-      // FIX: need to handle
-      return;
+      ht_node *p_new_node = ht_create_node(key, data);
+      // NOTE: Collision handling (Coalesced hashing)
+      int cursor = (int)ht->size - 1;
+      while (cursor >= 0 && !ht->nodes[cursor]) {
+        cursor--;
+      }
+
+      if (cursor == -1) {
+        printf("Hash table is full!");
+        return -1;
+      }
+      ht->nodes[cursor] = p_new_node;
+
+      while (p_node->next != NULL)
+        p_node = p_node->next;
+
+      p_node->next = ht->nodes[cursor];
     }
   }
+  return 0;
 }
 
 void *ht_get(ht *ht, const char *key) {
   unsigned int h = ht_hash(ht, key);
+  ht_node *p_current_node = ht->nodes[h];
 
-  if (ht->nodes[h] == NULL) {
+  if (p_current_node == NULL) {
     return 0;
   } else {
-    return ht->nodes[h]->data;
+    if (strcmp(p_current_node->key, key) >= 0) {
+      return p_current_node->data;
+    }
+    while (p_current_node->next != NULL && p_current_node->key != key)
+      p_current_node = p_current_node->next;
+    return p_current_node; // NULL or void *data
   }
 }
 
